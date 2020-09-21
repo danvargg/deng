@@ -11,6 +11,7 @@ from sagemaker import get_execution_role
 from sagemaker.amazon.amazon_estimator import get_image_uri
 from sagemake.predictor import csv_serializer
 from sagemaker.tuner import IntegerParameter, ContinuousParameter, HyperparameterTuner
+from sagemaker.pytorch import Pytorch, PytorchModel
 
 # Session
 session = sagemaker.Session()
@@ -24,6 +25,10 @@ prefix = 'data_folder'
 train_location = session.upload_data(DATA_DIR, key_prefix=prefix)
 val_location = session.upload_data(DATA_DIR, key_prefix=prefix)
 test_location = session.upload_data(DATA_DIR, key_prefix=prefix)
+
+# View buckets
+for obj in boto3.resource('s3').Bucket(bucket).objects.all():
+    print(obj.key)
 
 # Build container
 container = get_image_uri(session.boto_region_name, 'xgboost')
@@ -73,7 +78,7 @@ xgb_predictor.csv_serializer = csv_serializer
 y_pred = xgb_predictor.predict(X_test.values).decode('utf-8')
 y_pred = np.fromstring(y_pred, sep=',')
 
-# delete endpoint
+# Delete endpoint
 xgb_predictor.delete_endpoint()
 
 # Manual process
@@ -141,3 +146,13 @@ xgb_hyperparameter_tuner = HyperparameterTuner(
 
 # Best hyperparams
 xgb_hyperparameter_tuner.best_training_job()
+
+# Custom model
+estimator = Pytorch(
+    entry_point='train.py', source_dir='source_solution', role=role, fra....)
+
+# Load
+model = PytorchModel(
+    model_data=estimator.model_data, role=role, framework_version='1.0',
+    entry_point='predict.py', source_dir='source')
+# model.deploy
